@@ -114,6 +114,8 @@ const Select = React.createClass({
 		valueKey: React.PropTypes.string,           // path of the label value in option objects
 		valueRenderer: React.PropTypes.func,        // valueRenderer: function (option) {}
 		wrapperStyle: React.PropTypes.object,       // optional style to apply to the component wrapper
+		outerMenuWrapper: React.PropTypes.func,		// optional component to wrap outer menu
+		inputRef: React.PropTypes.func,				// get input ref
 	},
 
 	statics: { Async, AsyncCreatable, Creatable },
@@ -768,6 +770,11 @@ const Select = React.createClass({
 		this.setState({
 			focusedIndex: options[focusedIndex].index,
 			focusedOption: options[focusedIndex].option
+		}, () => {
+			if (this.props.outerMenuWrapper) {
+				this._scrollToFocusedOptionOnUpdate = true
+				this.forceUpdate()
+			}
 		});
 	},
 
@@ -860,7 +867,12 @@ const Select = React.createClass({
 			onBlur: this.handleInputBlur,
 			onChange: this.handleInputChange,
 			onFocus: this.handleInputFocus,
-			ref: ref => this.input = ref,
+			ref: ref => {
+				this.input = ref
+				if (this.props.inputRef && !this.props.autosize) {
+					this.props.inputRef(ref)
+				}
+			},
 			required: this.state.required,
 			value: this.state.inputValue
 		});
@@ -890,7 +902,7 @@ const Select = React.createClass({
 
 		if (this.props.autosize) {
 			return (
-				<AutosizeInput {...inputProps} minWidth="5" />
+				<AutosizeInput {...{...inputProps, inputRef: this.props.inputRef }} minWidth="5" />
 			);
 		}
 		return (
@@ -1042,7 +1054,7 @@ const Select = React.createClass({
 			return null;
 		}
 
-		return (
+		const content = (
 			<div ref={ref => this.menuContainer = ref} className="Select-menu-outer" style={this.props.menuContainerStyle}>
 				<div ref={ref => this.menu = ref} role="listbox" className="Select-menu" id={this._instancePrefix + '-list'}
 						 style={this.props.menuStyle}
@@ -1052,6 +1064,12 @@ const Select = React.createClass({
 				</div>
 			</div>
 		);
+
+		if (this.props.outerMenuWrapper) {
+			return this.props.outerMenuWrapper(content)
+		}
+
+		return content
 	},
 
 	render () {
